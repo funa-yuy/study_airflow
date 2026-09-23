@@ -1,0 +1,23 @@
+# ============================================================
+# 【設定実例】user_summary テーブル作成設定
+# ============================================================
+
+name: "user_summary"
+owner: "mart-team"
+tags:
+  - "mart"
+  - "user_analytics"
+
+# 前段の生データ（raw_users, raw_events）の更新完了を検知して起動
+schedule_assets:
+  - "redshift://prod_cluster/raw_schema/raw_users"
+  - "redshift://prod_cluster/raw_schema/raw_events"
+
+# create完了時に後続DAGへ更新を通知するAsset
+outlet_asset: "redshift://prod_cluster/mart_schema/user_summary"
+
+# 各タスクで実行するSQLファイルの指定
+tasks:
+  drop: "sqls/user_summary/drop.sql"
+  create: "sqls/user_summary/create.sql"
+  unload: "sqls/user_summary/unload.sql"
