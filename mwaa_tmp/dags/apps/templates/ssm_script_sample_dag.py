@@ -4,7 +4,7 @@ EC2 上のスクリプトを AWS Systems Manager (SSM) で実行するDAGテン�
 """
 from datetime import datetime
 from airflow import DAG
-from airflow.providers.amazon.aws.operators.ssm import SsmOperator
+from airflow.providers.amazon.aws.operators.ssm import SsmRunCommandOperator
 
 from common.default_args import COMMON_DEFAULT_ARGS
 
@@ -17,10 +17,12 @@ with DAG(
     tags=["app", "ssm", "legacy-migration"],
 ) as dag:
 
-    execute_ec2_script = SsmOperator(
+    execute_ec2_script = SsmRunCommandOperator(
         task_id="exec_script_on_ec2",
-        instance_ids=["i-0123456789abcdef0"],
         document_name="AWS-RunShellScript",
-        parameters={"commands": ["python3 /opt/scripts/my_job.py"]},
+        run_command_kwargs={
+            "InstanceIds": ["i-0123456789abcdef0"],
+            "Parameters": {"commands": ["python3 /opt/scripts/my_job.py"]},
+        },
         aws_conn_id="aws_default",
     )

@@ -119,17 +119,20 @@ tags:
 
 # 前段の生データ（raw_users, raw_events）の更新完了を検知して起動
 schedule_assets:
-  - "redshift://prod_cluster/raw_schema/raw_users"
-  - "redshift://prod_cluster/raw_schema/raw_events"
+  - "redshift://prod_cluster/dev/raw_schema/raw_users"
+  - "redshift://prod_cluster/dev/raw_schema/raw_events"
 
 # create完了時に後続DAGへ更新を通知するAsset
-outlet_asset: "redshift://prod_cluster/mart_schema/user_summary"
+outlet_asset: "redshift://prod_cluster/dev/mart_schema/user_summary"
 
 # 各タスクで実行するSQLファイルの指定
 tasks:
-  drop: "sqls/user_summary/drop.sql"
-  create: "sqls/user_summary/create.sql"
-  unload: "sqls/user_summary/unload.sql"
+  drop:
+    path: "sqls/user_summary/drop.sql"
+  create:
+    path: "sqls/user_summary/create.sql"
+  unload:
+    path: "sqls/user_summary/unload.sql"
 ```
 
 ---

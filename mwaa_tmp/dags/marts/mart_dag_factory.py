@@ -1,6 +1,6 @@
 """
 マート作成 DAG 自動生成ファクトリ（Airflow 3.x Asset 対応）。
-dags/marts/configs/*.yaml を読み込み、drop -> create -> unload の固定フローを持つ DAG を自動生成します。
+dags/marts/configs/*.yaml を読み込み、指定されたタスクを順次結合した DAG を自動生成します。
 """
 from pathlib import Path
 import yaml
@@ -8,6 +8,7 @@ import yaml
 from airflow import DAG
 from airflow.sdk import Asset
 from airflow.providers.amazon.aws.operators.redshift_data import RedshiftDataOperator
+from airflow.operators.bash import BashOperator
 
 from common.constants import (
     DEFAULT_REDSHIFT_CONN_ID,
@@ -18,6 +19,51 @@ from common.default_args import COMMON_DEFAULT_ARGS
 
 BASE_DIR = Path(__file__).parent
 CONFIG_DIR = BASE_DIR / "configs"
+
+# =============================================================
+# タスク生成関数（ビルダー）の定義
+# =============================================================
+def build_drop_task(task_id: str, task_conf: dict, context: dict):
+    return RedshiftDataOperator(
+        task_id=task_id,
+        sql=task_conf.get("path"),
+        database=context["database"],
+        workgroup_name=context["workgroup_name"],
+        aws_conn_id=context["aws_conn_id"],
+    )
+
+def build_create_task(task_id: str, task_conf: dict, context: dict):
+    return RedshiftDataOperator(
+        task_id=task_id,
+        sql=task_conf.get("path"),
+        database=context["database"],
+        workgroup_name=context["workgroup_name"],
+        aws_conn_id=context["aws_conn_id"],
+        outlets=context["create_outlets"],
+    )
+
+def build_unload_task(task_id: str, task_conf: dict, context: dict):
+    return RedshiftDataOperator(
+        task_id=task_id,
+        sql=task_conf.get("path"),
+        database=context["database"],
+        workgroup_name=context["workgroup_name"],
+        aws_conn_id=context["aws_conn_id"],
+    )
+
+def build_bash_task(task_id: str, task_conf: dict, context: dict):
+    return BashOperator(
+        task_id=task_id,
+        bash_command=task_conf.get("path"),
+    )
+
+# タスクIDとビルダー関数のマッピング辞書
+TASK_BUILDERS = {
+    "drop": build_drop_task,
+    "create": build_create_task,
+    "unload": build_unload_task,
+    "bash": build_bash_task,
+}
 
 for config_file in CONFIG_DIR.glob("*.yaml"):
     # テンプレートファイル（_ または example_ で始まるもの）は除外
@@ -51,7 +97,12 @@ for config_file in CONFIG_DIR.glob("*.yaml"):
     # default_args のマージ
     dag_default_args = {**COMMON_DEFAULT_ARGS, "owner": owner}
 
-    tasks_conf = conf.get("tasks", {})
+    context = {
+        "database": database,
+        "workgroup_name": workgroup_name,
+        "aws_conn_id": aws_conn_id,
+        "create_outlets": create_outlets,
+    }
 
     with DAG(
         dag_id=dag_id,
@@ -62,45 +113,20 @@ for config_file in CONFIG_DIR.glob("*.yaml"):
         tags=tags,
     ) as dag:
 
-        # 1. Drop タスク (固定ID: drop)
-        drop_sql_path = tasks_conf.get("drop")
-        if not drop_sql_path:
-            raise ValueError(f"[{dag_id}] tasks.drop のパスが指定されていません。")
+        tasks_conf = conf.get("tasks", {})
+        prev_task = None
 
-        drop_task = RedshiftDataOperator(
-            task_id="drop",
-            sql=drop_sql_path,
-            database=database,
-            workgroup_name=workgroup_name,
-            aws_conn_id=aws_conn_id,
-        )
+        for task_id, task_setting in tasks_conf.items():
+            builder = TASK_BUILDERS.get(task_id)
+            if not builder:
+                raise ValueError(f"[{dag_id}] 未知のタスクID '{task_id}' が指定されています。有効なタスクID: {list(TASK_BUILDERS.keys())}")
 
-        # 2. Create タスク (固定ID: create / 完了時にoutlet_assetを発行)
-        create_sql_path = tasks_conf.get("create")
-        if not create_sql_path:
-            raise ValueError(f"[{dag_id}] tasks.create のパスが指定されていません。")
+            # 文字列直指定にも辞書形式（path: ...）にも対応
+            task_dict = {"path": task_setting} if isinstance(task_setting, str) else task_setting
+            current_task = builder(task_id, task_dict, context)
 
-        create_task = RedshiftDataOperator(
-            task_id="create",
-            sql=create_sql_path,
-            database=database,
-            workgroup_name=workgroup_name,
-            aws_conn_id=aws_conn_id,
-            outlets=create_outlets,
-        )
-
-        drop_task >> create_task
-
-        # 3. Unload タスク (固定ID: unload / 指定がある場合のみ生成)
-        unload_sql_path = tasks_conf.get("unload")
-        if unload_sql_path:
-            unload_task = RedshiftDataOperator(
-                task_id="unload",
-                sql=unload_sql_path,
-                database=database,
-                workgroup_name=workgroup_name,
-                aws_conn_id=aws_conn_id,
-            )
-            create_task >> unload_task
+            if prev_task:
+                prev_task >> current_task
+            prev_task = current_task
 
     globals()[dag_id] = dag

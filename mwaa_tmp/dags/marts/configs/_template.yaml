@@ -20,10 +20,14 @@ schedule_assets:
 outlet_asset: ""
 
 # 4. 実行タスク定義（sqls/ からの相対パス）
+# ※ 実行したい順に記述してください。不要なタスクは行ごと削除可能です。
 tasks:
-  drop: ""                      # DROP TABLE 用の SQL ファイルパス
-  create: ""                    # CREATE TABLE AS SELECT 用の SQL ファイルパス
-  unload: ""                    # UNLOAD 用の SQL ファイルパス（不要な場合は空文字または行削除）
+  drop:
+    path: "sqls/<テーブル名>/drop.sql"       # DROP TABLE 用の SQL ファイルパス
+  create:
+    path: "sqls/<テーブル名>/create.sql"     # CREATE TABLE AS SELECT 用の SQL ファイルパス
+  unload:
+    path: "sqls/<テーブル名>/unload.sql"     # UNLOAD 用の SQL ファイルパス（不要なら削除）
 
 # 5. 接続先オーバーライド（任意）
 # ※ デフォルト以外のデータベースやワークグループに接続する場合のみコメントアウトを解除して指定

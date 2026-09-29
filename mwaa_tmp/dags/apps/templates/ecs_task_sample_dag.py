@@ -22,6 +22,7 @@ with DAG(
         task_id="run_batch_container",
         cluster="prod-app-cluster",
         task_definition="my-batch-job:latest",
+        overrides={},
         launch_type="FARGATE",
         network_configuration={
             "awsvpcConfiguration": {
