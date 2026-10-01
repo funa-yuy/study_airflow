@@ -104,6 +104,7 @@ aws cloudformation wait stack-delete-complete --stack-name study-mwaa-network
 
 どちらの方法でも同様に安全に構築・削除できますので、やりやすい方でお試しください。
 
-Ran command: `DEFAULT_VPC_ID=$(aws ec2 describe-vpcs --filters "Name=isDefault,Values=true" --query "Vpcs[0].VpcId" --output text)
-echo "Default VPC ID: ${DEFAULT_VPC_ID}"
-`
+
+
+## 作成確認
+[./mwaa_setup_check.png]
