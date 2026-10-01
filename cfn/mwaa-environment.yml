@@ -1,0 +1,226 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "MWAA Environment and IAM Roles"
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name that is prefixed to resource names
+    Type: String
+    Default: MWAAEnvironment
+
+  EnvironmentClass:
+    Description: The environment class (size) for MWAA
+    Type: String
+    Default: mw1.small
+    AllowedValues:
+      - mw1.small
+      - mw1.medium
+      - mw1.large
+      - mw1.xlarge
+      - mw1.2xlarge
+
+  MinWorkerNodes:
+    Description: The minimum number of workers that can run in the environment
+    Type: Number
+    Default: 1
+
+  PrivateSubnet1Id:
+    Description: Private Subnet 1 ID created by network-base stack
+    Type: AWS::EC2::Subnet::Id
+
+  PrivateSubnet2Id:
+    Description: Private Subnet 2 ID created by network-base stack
+    Type: AWS::EC2::Subnet::Id
+
+  SecurityGroupId:
+    Description: Security Group ID created by network-base stack
+    Type: AWS::EC2::SecurityGroup::Id
+
+  WebserverAccessMode:
+    Description: The access mode for the Airflow webserver (PUBLIC_ONLY or PRIVATE_ONLY)
+    Type: String
+    Default: PUBLIC_ONLY
+    AllowedValues:
+      - PUBLIC_ONLY
+      - PRIVATE_ONLY
+
+  MaxWorkerNodes:
+    Description: The maximum number of workers that can run in the environment
+    Type: Number
+    Default: 2
+
+  DagProcessingLogs:
+    Description: Log level for DagProcessing
+    Type: String
+    Default: INFO
+
+  SchedulerLogsLevel:
+    Description: Log level for SchedulerLogs
+    Type: String
+    Default: INFO
+
+  TaskLogsLevel:
+    Description: Log level for TaskLogs
+    Type: String
+    Default: INFO
+
+  WorkerLogsLevel:
+    Description: Log level for WorkerLogs
+    Type: String
+    Default: INFO
+
+  WebserverLogsLevel:
+    Description: Log level for WebserverLogs
+    Type: String
+    Default: INFO
+
+Resources:
+  #####################################################################################################################
+  # CREATE S3 Bucket
+  #####################################################################################################################
+
+  EnvironmentBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration: 
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  #####################################################################################################################
+  # CREATE MWAA Environment
+  #####################################################################################################################
+
+  MwaaEnvironment:
+    Type: AWS::MWAA::Environment
+    DependsOn: MwaaExecutionPolicy
+    Properties:
+      Name: !Sub "${AWS::StackName}-${EnvironmentName}"
+      EnvironmentClass: !Ref EnvironmentClass
+      SourceBucketArn: !GetAtt EnvironmentBucket.Arn
+      ExecutionRoleArn: !GetAtt MwaaExecutionRole.Arn
+      DagS3Path: dags/  
+      NetworkConfiguration:
+        SecurityGroupIds:
+          - !Ref SecurityGroupId
+        SubnetIds:
+          - !Ref PrivateSubnet1Id
+          - !Ref PrivateSubnet2Id
+      WebserverAccessMode: !Ref WebserverAccessMode
+      MinWorkers: !Ref MinWorkerNodes
+      MaxWorkers: !Ref MaxWorkerNodes
+      LoggingConfiguration:
+        DagProcessingLogs:
+          LogLevel: !Ref DagProcessingLogs
+          Enabled: true
+        SchedulerLogs:
+          LogLevel: !Ref SchedulerLogsLevel
+          Enabled: true
+        TaskLogs:
+          LogLevel: !Ref TaskLogsLevel
+          Enabled: true
+        WorkerLogs:
+          LogLevel: !Ref WorkerLogsLevel
+          Enabled: true
+        WebserverLogs:
+          LogLevel: !Ref WebserverLogsLevel
+          Enabled: true
+
+  #####################################################################################################################
+  # IAM Role & Policy
+  #####################################################################################################################
+
+  MwaaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - airflow-env.amazonaws.com
+                - airflow.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: "/service-role/"
+
+  MwaaExecutionPolicy:
+    DependsOn: EnvironmentBucket
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Roles:
+        - !Ref MwaaExecutionRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: airflow:PublishMetrics
+            Resource:
+              - !Sub "arn:aws:airflow:${AWS::Region}:${AWS::AccountId}:environment/${EnvironmentName}"
+          - Effect: Deny
+            Action: s3:ListAllMyBuckets
+            Resource:
+              - !Sub "${EnvironmentBucket.Arn}"
+              - !Sub "${EnvironmentBucket.Arn}/*"
+
+          - Effect: Allow
+            Action:
+              - "s3:GetObject*"
+              - "s3:GetBucket*"
+              - "s3:List*"
+            Resource:
+              - !Sub "${EnvironmentBucket.Arn}"
+              - !Sub "${EnvironmentBucket.Arn}/*"
+          - Effect: Allow
+            Action:
+              - logs:DescribeLogGroups
+            Resource: "*"
+
+          - Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:CreateLogGroup
+              - logs:PutLogEvents
+              - logs:GetLogEvents
+              - logs:GetLogRecord
+              - logs:GetLogGroupFields
+              - logs:GetQueryResults
+              - logs:DescribeLogGroups
+            Resource:
+              - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:airflow-${AWS::StackName}*"
+          - Effect: Allow
+            Action: cloudwatch:PutMetricData
+            Resource: "*"
+          - Effect: Allow
+            Action:
+              - sqs:ChangeMessageVisibility
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+              - sqs:GetQueueUrl
+              - sqs:ReceiveMessage
+              - sqs:SendMessage
+            Resource:
+              - !Sub "arn:aws:sqs:${AWS::Region}:*:airflow-celery-*"
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:DescribeKey
+              - "kms:GenerateDataKey*"
+              - kms:Encrypt
+            NotResource: !Sub "arn:aws:kms:*:${AWS::AccountId}:key/*"
+            Condition:
+              StringLike:
+                "kms:ViaService":
+                  - !Sub "sqs.${AWS::Region}.amazonaws.com"
+
+Outputs:
+  MwaaApacheAirflowUI:
+    Description: MWAA Environment Webserver URL
+    Value: !Sub "https://${MwaaEnvironment.WebserverUrl}"
+
+  EnvironmentBucketArn:
+    Description: S3 Bucket ARN for DAGs and requirements
+    Value: !GetAtt EnvironmentBucket.Arn
