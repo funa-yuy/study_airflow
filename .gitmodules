@@ -1,0 +1,3 @@
+[submodule "amazon-mwaa-docker-images"]
+	path = amazon-mwaa-docker-images
+	url = https://github.com/funa-yuy/amazon-mwaa-docker-images.git
