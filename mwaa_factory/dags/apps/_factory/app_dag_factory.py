@@ -2,13 +2,18 @@
 アプリケーション DAG 自動生成ファクトリ（Airflow 3.x 対応）
 
 スキャン対象:
-  - DAG定義  : dags/apps/<product>/dag_*.yaml
-  - タスク定義: dags/apps/<product>/tasks/*.yaml
+  - DAG定義  : dags/apps/product/<product>/dag_*.yaml
+  - タスク定義: dags/apps/product/<product>/tasks/*.yaml
 
 タスクの依存関係は各 task.yaml の depends_on.tasks で定義する。
-タスクタイプ:
-  - bash    : BashOperator でコマンドを実行
-  - ecs_run : BashOperator 経由で apps/scripts/ecs_run.sh を呼び出す
+
+タスクの指定方式（いずれかを選択）:
+  - operator: "bash"（推奨）: command に書かれたシェルコマンドを直接実行
+  - type: "ecs_run"（互換） : apps/scripts/ecs_run.sh を自動組み立てて実行
+
+TODO:
+  現在は 'operator'と'type'が混在しているため、今後は 'operator'（例: operator: bash, operator: ecs_run）に
+  一本化したい。ecs_run.shをカスタムOperator化したい
 """
 import sys
 from pathlib import Path
