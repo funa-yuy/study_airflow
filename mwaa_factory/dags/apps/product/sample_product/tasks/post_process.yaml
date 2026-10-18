@@ -1,0 +1,12 @@
+task_id: "post_process"
+dag_id:  "sample_batch"
+owner:   "app-team"
+description: "後処理タスク。メイン処理完了後のクリーンアップ・通知。"
+
+# 依存関係（main_process 完了後に実行）
+depends_on:
+  tasks:
+    - "main_process"
+
+type: "bash"
+command: "echo '[post_process] 後処理完了'"

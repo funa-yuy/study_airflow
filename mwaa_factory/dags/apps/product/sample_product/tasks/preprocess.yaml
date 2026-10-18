@@ -1,0 +1,11 @@
+task_id: "preprocess"
+dag_id:  "sample_batch"
+owner:   "app-team"
+description: "前処理タスク。メイン処理の前にデータを準備する。"
+
+# 依存関係（このタスクが最初なので上流なし）
+depends_on:
+  tasks: []
+
+type: "bash"
+command: "echo '[preprocess] 前処理完了: {{ params.target_date if params.target_date else ds }}'"

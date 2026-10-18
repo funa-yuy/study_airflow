@@ -1,0 +1,22 @@
+# ============================================================
+# [モック] ECSジョブ設定ファイル（sample_config.yml）
+# ecs_run.sh に引数として渡される設定ファイル。
+# 本番では実際のECSタスク設定・アプリ固有パラメータを記載する。
+# ============================================================
+
+# ECSタスクの設定（本番用）
+ecs:
+  cluster: "prod-app-cluster"
+  task_definition: "sample-batch:latest"
+  launch_type: "FARGATE"
+  subnets:
+    - "subnet-xxxxxx"
+  security_groups:
+    - "sg-xxxxxx"
+
+# アプリ固有パラメータ
+job:
+  name: "sample_batch"
+  description: "サンプルバッチ処理"
+  # 実行時に Airflow から上書き可能なパラメータ
+  target_date: ""    # 空の場合は ecs_run.sh 内でシステム日付を使用

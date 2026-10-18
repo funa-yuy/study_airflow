@@ -1,0 +1,25 @@
+# ============================================================
+# 【アプリDAG定義テンプレート】
+# 新規DAG作成時はこのファイルをコピーし、
+# apps/<product_name>/dag_<dag_name>.yaml として保存してください。
+# ============================================================
+
+# 1. DAG識別子（必須）
+# DAG ID は "dag_app_<dag_id>" として登録されます
+dag_id: ""          # 例: "my_batch"  → Airflow上: dag_app_my_batch
+owner: ""           # 担当チーム名   例: "team-a"
+tags:
+  - "app"
+  # - "team-a"      # チームタグなど追加可
+
+# 2. 起動スケジュール（schedule か schedule_assets のどちらかを指定）
+# Cron指定の場合（schedule_assets は空にする）
+schedule: ""        # 例: "0 2 * * *"  ※不要な場合は行ごと削除
+
+# 前段Assetの更新完了を検知して起動する場合（scheduleは削除する）
+schedule_assets: []
+  # - "redshift://prod_cluster/dev/mart_schema/user_summary"
+
+# 3. 完了通知（自身が発行する Asset URI）
+# 後続DAGに更新を通知する。後続がない場合は空文字または省略可
+outlet_asset: ""    # 例: "app://my_batch/completed"

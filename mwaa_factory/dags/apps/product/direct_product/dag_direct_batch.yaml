@@ -1,0 +1,13 @@
+# ============================================================
+# 【設定実例】command 直接指定方式の DAG 定義
+# ============================================================
+dag_id:      "direct_batch"
+owner:       "app-team"
+description: "command でスクリプトを直接実行する方式のバッチDAG"
+schedule:    "0 4 * * *"
+tags:
+  - "app"
+  - "direct_cmd"
+  - "direct_product"
+params:
+  env: "production"

@@ -1,0 +1,6 @@
+task_id: "preprocess"
+dag_id:  "direct_batch"
+owner:   "app-team"
+description: "前処理タスク"
+operator: "bash"
+command:  "echo '[direct_batch] 前処理を開始します...'"

@@ -1,0 +1,19 @@
+# ============================================================
+# 【設定実例】direct_batch ジョブ設定ファイル
+# ============================================================
+
+# ECSタスクの設定（本番用）
+ecs:
+  cluster: "prod-app-cluster"
+  task_definition: "direct-batch:latest"
+  launch_type: "FARGATE"
+  subnets:
+    - "subnet-xxxxxx"
+  security_groups:
+    - "sg-xxxxxx"
+
+# アプリ固有パラメータ
+job:
+  name: "direct_batch"
+  description: "command直接指定方式のバッチ処理"
+  target_date: ""

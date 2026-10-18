@@ -1,0 +1,11 @@
+task_id: "post_process"
+dag_id:  "direct_batch"
+owner:   "app-team"
+description: "後処理タスク"
+
+depends_on:
+  tasks:
+    - "main_process"
+
+operator: "bash"
+command:  "echo '[direct_batch] 後処理が完了しました。'"

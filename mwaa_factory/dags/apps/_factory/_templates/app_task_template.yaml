@@ -1,0 +1,29 @@
+# ============================================================
+# 【アプリタスク定義テンプレート】
+# 新規タスク作成時はこのファイルをコピーし、
+# apps/<product_name>/tasks/<task_id>.yaml として保存してください。
+# ============================================================
+
+# 1. タスク識別子（必須）
+task_id: ""         # 例: "main_process"（ファイル名と合わせることを推奨）
+dag_id:  ""         # 所属するDAGのdag_id（dag_*.yamlのdag_idと一致させる）
+owner:   ""         # このタスクの担当者・チーム
+description: ""     # タスクの説明（任意）
+
+# 2. 依存関係
+depends_on:
+  # 上流タスク（このDAG内で先に完了すべきtask_id一覧）
+  tasks: []
+    # - "preprocess"
+
+# 3. 実行オペレーターとコマンド
+# 方式A: operator: "bash"（推奨: command 直書き方式）
+operator: "bash"
+command:  "bash apps/scripts/ecs_run.sh apps/product/<product_name>/configs/sample_config.yml"
+
+# 方式B: type によるコマンド自動組み立て（ecs_run など）
+# operator: "bash"
+# type: "ecs_run"
+# ecs_run:
+#   script: "ecs_run.sh"              # apps/scripts/ 配下のスクリプト名
+#   config: "configs/my_config.yml"   # プロダクトディレクトリ基準のパス

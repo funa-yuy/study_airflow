@@ -1,0 +1,21 @@
+# ============================================================
+# 【DAG定義】sample_batch
+# プロダクト: sample_product
+# DAG ID: dag_app_sample_batch
+# ============================================================
+
+dag_id: "sample_batch"
+owner: "app-team"
+tags:
+  - "app"
+  - "sample"
+
+# 毎日深夜2時に実行
+schedule: "0 2 * * *"
+
+# 前段Assetトリガーを使う場合はscheduleを削除してこちらを指定
+# schedule_assets:
+#   - "redshift://prod_cluster/dev/mart_schema/user_summary"
+
+# 完了通知
+outlet_asset: "app://sample_batch/completed"

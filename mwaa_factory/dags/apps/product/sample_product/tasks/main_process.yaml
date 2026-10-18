@@ -1,0 +1,16 @@
+task_id: "main_process"
+dag_id:  "sample_batch"
+owner:   "app-team"
+description: "メインバッチ処理。ecs_run.sh 経由でECSタスクを起動する。"
+
+# 依存関係（preprocess 完了後に実行）
+depends_on:
+  tasks:
+    - "preprocess"
+
+# ECS実行タイプ
+# apps/scripts/ecs_run.sh に configs/sample_config.yml を渡して実行する
+type: "ecs_run"
+ecs_run:
+  script: "ecs_run.sh"                       # apps/scripts/ 配下のスクリプト
+  config: "configs/sample_config.yml"        # このyamlと同じproduct_dir基準のパス

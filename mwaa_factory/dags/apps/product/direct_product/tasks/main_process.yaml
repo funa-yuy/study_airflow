@@ -1,0 +1,11 @@
+task_id: "main_process"
+dag_id:  "direct_batch"
+owner:   "app-team"
+description: "メイン処理。command で apps/scripts/ecs_run.sh を直接指定して実行する"
+
+depends_on:
+  tasks:
+    - "preprocess"
+
+operator: "bash"
+command:  "bash apps/scripts/ecs_run.sh apps/product/direct_product/configs/direct_config.yml"
